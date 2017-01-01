@@ -77,9 +77,9 @@ mybatis 把sql 语句都放在配置文件中 , 配置文件中的每条sql语�
 
 默认的sql语句配置文件在github上 test 目录同样可以找到`User.xml`
 
-配置文件中 <select> <update> 等标签对应数据库语句
+配置文件中 `<select>` `<update>` 等标签对应数据库语句
 
-<resultMap> 标签对应结果集, type对应类名, id不重复即可
+`<resultMap>` 标签对应结果集, type对应类名, id不重复即可
 下面的子标签, id对应主键, 其他字段对应result标签
 
 ```xml
