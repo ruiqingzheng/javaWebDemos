@@ -227,3 +227,39 @@ jdbc方式
 		return conn;
 	}
 ```
+
+
+
+
+
+# jdbc 设置查询参数
+
+```java
+
+			StringBuilder sql = new StringBuilder("SELECT ID,COMMAND,DESCRIPTION,CONTENT from message");
+
+			List<String> params = new ArrayList<>();
+			// command 参数不为null, 且不为空
+			if (command != null && !"".equals(command.trim())) {
+				sql.append(" and COMMAND=?");
+				params.add(command);
+			}
+
+			if (description != null && !"".equals(description.trim())) {
+				sql.append(" and DESCRIPTION like '%' ? '%'");
+				params.add(description);
+			}
+
+			PreparedStatement statement = conn.prepareStatement(sql.toString());
+
+			// statement 的setString方法 将问号替换成实际变量
+
+			for (int i = 0; i < params.size(); i++) {
+				statement.setString(i+1, params.get(i));
+			}
+
+			ResultSet rs = statement.executeQuery();
+```
+
+
+
