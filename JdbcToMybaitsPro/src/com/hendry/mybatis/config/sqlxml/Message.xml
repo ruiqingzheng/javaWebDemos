@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+       Copyright 2009-2016 the original author or authors.
+
+       Licensed under the Apache License, Version 2.0 (the "License");
+       you may not use this file except in compliance with the License.
+       You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+       Unless required by applicable law or agreed to in writing, software
+       distributed under the License is distributed on an "AS IS" BASIS,
+       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       See the License for the specific language governing permissions and
+       limitations under the License.
+
+-->
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="Message">
+<!-- 
+	1. type 对应实体类 , id提供给配置文件中使用, 比如后面的sql语句返回resultMap
+	2. resultMap 中的子标签, id对应主键id , result 对应字段
+	3. result子标签中, column 对应数据库的column , jdbctype对应的就是 java.sql.Types 
+		property 对应的是实体类的属性字段.
+	 -->
+	 
+  <resultMap type="com.hendry.mybatis.beans.Message" id="MessageResult">
+    <id column="id" jdbcType="INTEGER" property="id"/>
+    <result column="COMMAND" jdbcType="VARCHAR" property="command"/>
+    <result column="DESCRIPTION" jdbcType="VARCHAR" property="description"/>
+    <result column="CONTENT" jdbcType="VARCHAR" property="content"/>
+  </resultMap>
+
+  <select id="queryMessageList" parameterType="com.hendry.mybatis.beans.Message" resultMap="MessageResult">
+ 	SELECT ID,COMMAND,DESCRIPTION,CONTENT from message where 1=1 
+ 	<!-- 等同 java 语句 'command != null && !"".equals(command.trim())'
+ 		但两边本来就有双引号, 双引号冲突转义需要按html规则, 比较麻烦, 所以把java的 && 换成 表达式的 and
+ 		而双引号, 按转义换成 &quto
+ 	 -->
+ 	<if test="command != null and !&quot;&quot;.equals(command.trim())">
+ 		and command = #{command}
+ 	</if>
+ 	<!-- 注意 '%' 后必须要有空格 否则结果错误   -->
+ 	 <if test="description != null and !&quot;&quot;.equals(description.trim())">
+ 		and DESCRIPTION like '%' #{description} '%'
+ 	</if>
+  </select>
+</mapper>

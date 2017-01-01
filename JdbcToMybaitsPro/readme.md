@@ -1,10 +1,185 @@
-# 测试数据库
+# 重构使用mybatis 
 
-mybatis_learn
+##获取mybatis 获取Mybatis的 , SqlSession 对象
 
-表结构见资源里面的message.sql
+1. 添加mybatis 依赖 ,    maven.aliyun.com
+```
+<dependency>
+  <groupId>org.mybatis</groupId>
+  <artifactId>mybatis</artifactId>
+  <version>3.4.1</version>
+</dependency>
+```
+加入依赖后, 正常的话, 本地仓库会马上下载mybatis库文件 , 而且tomcat会自动重启, 重启后项目目录的lib目录会部署mybatis库文件
 
-一步步先从直接使用jdbc  , 到分层使用jdbc , 到最后把jdbc替换为mybatis.
+
+2. 拷贝mybatis 主配置文件
+如果不是用maven , 直接下载的话,  解压出来有个示例代码`test`目录, 从这个目录里可以获取到主配置文件
+那么在eclipse , 点击pom.xml 可以看到mybatis的  github 地址, 我们可以到github上去找这个主配置文件 
+http://github.com/mybatis/mybatis-3
+
+文件名是   configuration.xml   , 打开项目仓库后, 按两下TT, 或者点击Find File , 输入configuration , 然后看哪个是在test目录下的
+
+可见 `src/test/java/org/apache/ibatis/submitted/complex_property/Configuration.xml` 
+
+拷贝该文件到项目config 目录
+
+
+3. 修改该配置文件
+
+按原来的jdbc代码, 修改配置文件,  数据库jdbc url ,  username , password
+```xml
+  <environments default="development">
+    <environment id="development">
+      <transactionManager type="JDBC">
+        <property name="" value=""/>
+      </transactionManager>
+      <dataSource type="UNPOOLED">
+        <property name="driver" value="com.mysql.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://192.168.1.222:3306/mybatis_learn?characterEncoding=utf-8"/>
+        <property name="username" value="mybatis_learn_f"/>
+        <property name="password" value="password"/>
+      </dataSource>
+    </environment>
+  </environments>
+
+```
+
+
+
+4. 修改代码获取 mybatis , sqlSession功能: sql传参 , 执行sql , 获取sql执行结果, 事务控制
+    读取配置文件
+    构建sqlSessionFactory
+    打开会话
+    
+ ```java
+public class DBAccess {
+	public static SqlSession getConnection() throws IOException {
+		// 1. 用mybatis resource 类获取reader对象, 读取配置文件,参数是配置文件路径
+		Reader reader = Resources.getResourceAsReader("com/hendry/mybatis/config/Configuration.xml");
+
+		// 2. 传参reader 获取工厂对象
+		SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(reader);
+
+		// 3. 工厂对象打开数据库会话 mybatis 的SqlSession对象
+		SqlSession openSession = sqlSessionFactory.openSession();
+		return openSession;
+	}
+}
+ ```
+
+
+##  修改配置文件, 使用SqlSession调用配置文件中的sql语句
+
+mybatis 把sql 语句都放在配置文件中 , 配置文件中的每条sql语句 都设置有id , 且每个配置文件都有namespace, 用来保证namespace.id 不至于重复
+
+且配置文件中的namespace 不可省略
+
+默认的sql语句配置文件在github上 test 目录同样可以找到`User.xml`
+
+配置文件中 <select> <update> 等标签对应数据库语句
+
+<resultMap> 标签对应结果集, type对应类名, id不重复即可
+下面的子标签, id对应主键, 其他字段对应result标签
+
+```xml
+
+<mapper namespace="Message">
+<!-- 
+	1. type 对应实体类 , id提供给配置文件中使用, 比如后面的sql语句返回resultMap
+	2. resultMap 中的子标签, id对应主键id , result 对应字段
+	3. result子标签中, column 对应数据库的column , jdbctype对应的就是 java.sql.Types 
+		property 对应的是实体类的属性字段.
+	 -->
+	 
+  <resultMap type="com.hendry.mybatis.beans.Message" id="MessageResult">
+    <id column="id" jdbcType="INTEGER" property="id"/>
+    <result column="COMMAND" jdbcType="VARCHAR" property="command"/>
+    <result column="DESCRIPTION" jdbcType="VARCHAR" property="description"/>
+    <result column="CONTENT" jdbcType="VARCHAR" property="content"/>
+  </resultMap>
+
+  <select id="queryMessageList" parameterType="long" resultMap="MessageResult">
+ 	SELECT ID,COMMAND,DESCRIPTION,CONTENT from message where 1=1 
+  </select>
+</mapper>
+```
+
+java.sql.Types
+
+java代码中使用SqlSession.selectList(sql_id) 来调用sql语句, DAO类中
+
+```java
+	//重构 mybatis 访问数据库
+	public List<Message> queryMessage(String command, String description) {
+		List<Message> messageList = new ArrayList<Message>();
+		SqlSession sqlSession = null;
+
+		try {
+			sqlSession = DBAccess.getConnection();
+			messageList = sqlSession.selectList("Message.queryMessageList");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			if(sqlSession != null) {
+				sqlSession.close();
+			}
+		}
+		
+		return messageList;
+	}
+```
+
+
+主配置文件中调用sql配置文件
+```
+  <mappers>
+    <mapper resource="com/hendry/mybatis/config/sqlxml/Message.xml"/>
+  </mappers>
+```
+
+# sql配置文件传递参数
+
+
+1. 设置sql配置文件中parameterType , 设置为需要传递的完整类名
+    传递对象, new一个需要传递的对象, 初始化属性设置为需要传递的值
+
+```java
+		Message msg = new Message();
+		msg.setCommand(command);
+		msg.setDescription(description);
+        ...
+        messageList = sqlSession.selectList("Message.queryMessageList",msg);
+        ...
+```
+
+
+2. 该配置文件
+在sql配置文件中的判断语句 可以使用ignl表达式,   该表达式, 可以直接使用java代码, 包括变量,   但在双引号下需要转义时, 需要把特殊符号按html规则转义
+
+`#{变量名}` 这种传递变量, 会被解析成`?` 
+
+```
+  <select id="queryMessageList" parameterType="com.hendry.mybatis.beans.Message" resultMap="MessageResult">
+ 	SELECT ID,COMMAND,DESCRIPTION,CONTENT from message where 1=1 
+ 	<!-- 等同 java 语句 'command != null && !"".equals(command.trim())'
+ 		但两边本来就有双引号, 双引号冲突转义需要按html规则, 比较麻烦, 所以把java的 && 换成 表达式的 and
+ 		而双引号, 按转义换成 &quto
+ 	 -->
+ 	<if test="command != null and !&quot;&quot;.equals(command.trim())">
+ 		and command = #{command}
+ 	</if>
+ 	<!-- 注意 '%' 后必须要有空格 否则结果错误   -->
+ 	 <if test="description != null and !&quot;&quot;.equals(description.trim())">
+ 		and DESCRIPTION like '%' #{description} '%'
+ 	</if>
+  </select>
+```
+
+
+
+----------------
 
 
 # 直接使用jdbc
@@ -81,16 +256,5 @@ jdbc 设置查询参数
 
 
 
-
-# 代码重构分层
-
-1. 先分离DAO层出来
-
-DAO :   和什么表相关的操作, 就都放在`表名DAO`这个类里面 , 比如Message表, 那么操作这个表的类就是`MessageDAO`
-
-
-2. 分离出service层:
-    暂时这里service层非常简单就是实例化dao , 调用dao
-service : 控制层一般不直接调用DAO , 而是通过service层,  service层会根据控制层的需求来组织一些查询参数, 甚至是一些逻辑代码运行
 
 

@@ -1,5 +1,6 @@
 package com.hendry.mybatis.dao;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -8,11 +9,58 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.ibatis.session.SqlSession;
+import org.junit.Test;
+
 import com.hendry.mybatis.beans.Message;
+import com.hendry.mybatis.db.DBAccess;
 
 public class MessageDao {
-
+	
+	
+	//重构 mybatis 访问数据库
 	public List<Message> queryMessage(String command, String description) {
+		List<Message> messageList = new ArrayList<Message>();
+		SqlSession sqlSession = null;
+		Message msg = new Message();
+		msg.setCommand(command);
+		msg.setDescription(description);
+
+		try {
+			sqlSession = DBAccess.getConnection();
+			//调用sql , 且传递参数
+			messageList = sqlSession.selectList("Message.queryMessageList",msg);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			if(sqlSession != null) {
+				sqlSession.close();
+			}
+		}
+		
+		return messageList;
+	}
+	
+	
+
+	@Test
+	public void testSqlSession() {
+		List<Message> messageList = this.queryMessage(null, null);
+		for(Message msg: messageList) {
+			System.out.println(msg.toString());
+		}
+		System.out.println("------------------------------------------");
+		System.out.println("测试传递参数调用");
+		messageList = this.queryMessage(null, "精彩");
+		for(Message msg: messageList) {
+			System.out.println(msg.toString());
+		}
+	}
+	
+	
+
+	public List<Message> queryMessageByJdbc(String command, String description) {
 		List<Message> messageList = new ArrayList<Message>();
 
 		try {
