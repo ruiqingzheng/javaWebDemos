@@ -52,7 +52,7 @@ http://github.com/mybatis/mybatis-3
     构建sqlSessionFactory
     打开会话
     
- ```java
+```java
 public class DBAccess {
 	public static SqlSession getConnection() throws IOException {
 		// 1. 用mybatis resource 类获取reader对象, 读取配置文件,参数是配置文件路径
@@ -66,7 +66,7 @@ public class DBAccess {
 		return openSession;
 	}
 }
- ```
+```
 
 
 ##  修改配置文件, 使用SqlSession调用配置文件中的sql语句
