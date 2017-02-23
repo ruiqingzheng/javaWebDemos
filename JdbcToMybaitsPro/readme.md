@@ -70,6 +70,7 @@ public class DBAccess {
 
 
 ##  修改配置文件, 使用SqlSession调用配置文件中的sql语句
+http://brianway.github.io/2016/03/08/mybatis-learn-5-configuration/
 
 mybatis 把sql 语句都放在配置文件中 , 配置文件中的每条sql语句 都设置有id , 且每个配置文件都有namespace, 用来保证namespace.id 不至于重复
 
